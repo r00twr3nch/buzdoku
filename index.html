@@ -230,6 +230,21 @@
     box-shadow: none;
     overflow: hidden;
   }
+  .board.spiral .spiral-lines {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: visible;
+  }
+  .board.spiral .spiral-lines polygon {
+    fill: none;
+    stroke: #000;
+    stroke-width: 0.55;
+    stroke-linejoin: miter;
+  }
   .board.spiral .cell {
     position: absolute;
     inset: 0;
@@ -240,7 +255,7 @@
     padding: 0;
     border-radius: 0;
     background: color-mix(in srgb, var(--tint) 62%, white);
-    box-shadow: inset 0 0 0 2px #16324a;
+    box-shadow: none;
     font-size: clamp(10px, 2.25cqi, 16px);
     line-height: 1;
     -webkit-clip-path: var(--slice);
@@ -734,7 +749,7 @@ function paint(i) {
 function spiralSlice(i) {
   const ring = Math.floor(i / 9);
   const angle = i % 9;
-  const gap = 0.85;
+  const gap = 0.35;
   const span = (49.6 - 2.4 - gap * 8) / 9;
   const inner = ring === 0 ? 2.4 : 2.4 + ring * (span + gap) - gap;
   const outer = 2.4 + ring * (span + gap) + span;
@@ -753,6 +768,8 @@ function spiralSlice(i) {
     ? [[50, 50]]
     : [1, 0].map(n => flat(inner, start + (end - start) * n));
   const points = [...outerPoints, ...innerPoints].map(point => point[0].toFixed(2) + "% " + point[1].toFixed(2) + "%");
+  const edge = [...outerPoints, ...innerPoints, outerPoints[0]]
+    .map(point => point[0].toFixed(2) + "," + point[1].toFixed(2)).join(" ");
   const label = (inner + outer) / 2;
   const mid = flat(label, midAngle);
   let spin = midAngle * 180 / Math.PI;
@@ -760,6 +777,7 @@ function spiralSlice(i) {
   while (spin <= -90) spin += 180;
   return {
     clip: "polygon(" + points.join(",") + ")",
+    edge,
     x: mid[0] - 50,
     y: mid[1] - 50,
     spin: Math.round(spin)
@@ -775,6 +793,10 @@ function build() {
     : "";
   boardEl.innerHTML = "";
   if (spiralMode) {
+    const lines = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    lines.classList.add("spiral-lines");
+    lines.setAttribute("viewBox", "0 0 100 100");
+    boardEl.append(lines);
     values.forEach((n, i) => {
       const cell = document.createElement("button");
       cell.type = "button";
@@ -782,6 +804,9 @@ function build() {
       cell.dataset.i = i;
       const slice = spiralSlice(i);
       cell.style.setProperty("--slice", slice.clip);
+      const edge = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+      edge.setAttribute("points", slice.edge);
+      lines.append(edge);
       cell.style.setProperty("--lx", slice.x.toFixed(2) + "%");
       cell.style.setProperty("--ly", slice.y.toFixed(2) + "%");
       cell.style.setProperty("--spin", slice.spin + "deg");
