@@ -220,6 +220,82 @@
     to { transform: translateY(280%); }
   }
   .cell.selected { background: #fff4e8; box-shadow: inset 0 0 0 3px var(--accent); }
+  .board.spiral {
+    display: block;
+    container-type: size;
+    aspect-ratio: 1;
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: hidden;
+  }
+  .board.spiral .cell {
+    position: absolute;
+    inset: 0;
+    width: auto;
+    height: auto;
+    aspect-ratio: auto;
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+    background: color-mix(in srgb, var(--tint) 62%, white);
+    box-shadow: inset 0 0 0 2px #16324a;
+    font-size: clamp(10px, 2.25cqi, 16px);
+    line-height: 1;
+    -webkit-clip-path: var(--slice);
+    clip-path: var(--slice);
+  }
+  .board.spiral .cell > b {
+    position: absolute;
+    left: calc(50% + var(--lx));
+    top: calc(50% + var(--ly));
+    font-size: inherit;
+    transform: translate(-50%, -50%) rotate(var(--spin)) scale(var(--scale, 1));
+    transform-origin: center;
+    line-height: 1;
+    padding-block: .34em;
+    pointer-events: none;
+  }
+  .board.spiral .cell > b[data-mark]::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    width: .55em;
+    height: .12em;
+    border-radius: 1px;
+    bottom: 0;
+    background: currentColor;
+    transform: translateX(-50%);
+  }
+  .board.spiral .cell.given { background: color-mix(in srgb, var(--tint) 46%, white); }
+  .board.spiral .cell.selected { background: #fff4e8; box-shadow: none; z-index: 2; }
+  .board.spiral .cell.wrong { color: white; background: var(--accent); }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 10px 0 0;
+  }
+  .legend[hidden] { display: none; }
+  .legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 28px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: #fff;
+    color: #24516d;
+    font-size: 12px;
+    font-weight: 800;
+  }
+  .legend i {
+    width: 12px;
+    height: 12px;
+    border-radius: 4px;
+    box-shadow: inset 0 0 0 2px var(--swatch);
+  }
   .cell.wrong { color: white; background: var(--accent); }
   .cell.melt { animation: melt .45s ease; }
   .cell:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
@@ -326,6 +402,8 @@
   }
   .menu button.quiet { background: #fff; color: var(--ink); box-shadow: 0 6px 0 #b7d7e8; }
   .menu button.ice { background: var(--ice); box-shadow: 0 6px 0 #1d4e70; }
+  .menu button.spiral { background: #5b4b8a; box-shadow: 0 6px 0 #3c3160; }
+  .menu button.spiral:active { box-shadow: 0 2px 0 #3c3160; }
   .menu button:active { transform: translateY(4px); box-shadow: 0 2px 0 #c44b30; }
   .menu button.quiet:active { box-shadow: 0 2px 0 #b7d7e8; }
   .menu button.ice:active { box-shadow: 0 2px 0 #1d4e70; }
@@ -351,10 +429,11 @@
   <section class="screen" id="home">
     <div class="mark" aria-hidden="true">9</div>
     <h1>Sudoku</h1>
-    <p class="tag">Klasik tahta ya da eriyen buz.</p>
+    <p class="tag">Klasik tahta, eriyen buz ya da spiral.</p>
     <div class="menu">
       <button id="play" type="button">Sudoku</button>
       <button id="playIce" class="ice" type="button">Buzdoku</button>
+      <button id="playSpiral" class="spiral" type="button">Spiral <small>9 halka, 9 kol</small></button>
       <button id="openSettings" class="quiet" type="button">Ayarlar</button>
     </div>
   </section>
@@ -396,6 +475,7 @@
     </div>
   </header>
   <div class="board" id="board"></div>
+  <div class="legend" id="legend" hidden></div>
   <div class="dock">
     <div class="pad" id="pad"></div>
     <div class="actions">
@@ -435,8 +515,12 @@ const BASE = [
   3,4,5,2,8,6,1,7,9
 ];
 const LEVELS = { 35: "Kolay", 45: "Orta", 53: "Zor" };
+const SPIRAL_LEVELS = { 28: "Kolay", 40: "Orta", 50: "Zor" };
+const SPIRAL_TINTS = ["#e23b3b", "#1c7ed6", "#f08c00", "#2f9e44", "#9c36b5", "#0ca678", "#e8590c", "#1971c2", "#f59f00"];
+const SPIRAL_BOARDS = [[2,5,4,3,6,7,1,9,8,3,7,6,1,8,9,4,2,5,1,8,9,5,4,2,6,7,3,4,9,2,7,3,6,5,8,1,6,1,7,8,9,5,3,4,2,5,3,8,2,1,4,7,6,9,7,6,3,9,2,1,8,5,4,8,2,5,4,7,3,9,1,6,9,4,1,6,5,8,2,3,7],[4,6,1,2,8,9,7,5,3,8,2,9,3,7,5,1,4,6,3,7,5,4,6,1,9,8,2,2,3,7,6,5,4,8,9,1,5,8,6,1,9,7,2,3,4,1,9,4,8,2,3,6,7,5,9,5,3,7,1,6,4,2,8,6,4,8,9,3,2,5,1,7,7,1,2,5,4,8,3,6,9],[9,3,5,1,4,7,8,2,6,6,4,7,3,8,2,1,5,9,1,8,2,9,6,5,3,4,7,5,6,3,7,2,8,9,1,4,4,2,9,6,5,1,7,8,3,8,7,1,4,3,9,5,6,2,7,1,8,2,9,4,6,3,5,3,9,4,5,1,6,2,7,8,2,5,6,8,7,3,4,9,1]];
 let emptyCount = 45;
 let iceMode = false;
+let spiralMode = false;
 const PEERS = Array.from({ length: 81 }, (_, i) => {
   const row = Math.floor(i / 9) * 9;
   const col = i % 9;
@@ -447,6 +531,35 @@ const PEERS = Array.from({ length: 81 }, (_, i) => {
     peers.add(col + k * 9);
   }
   [0, 1, 2, 9, 10, 11, 18, 19, 20].forEach(k => peers.add(box + k));
+  peers.delete(i);
+  return [...peers];
+});
+
+const SPIRAL_SIZE = 81;
+function spiralCell(ring, angle) {
+  return ring * 9 + (angle % 9 + 9) % 9;
+}
+const SPIRAL_GROUPS = (() => {
+  const rings = [0, 1, 2, 3, 4, 5, 6, 7, 8].map(ring => [0, 1, 2, 3, 4, 5, 6, 7, 8].map(angle => spiralCell(ring, angle)));
+  const spokes = [0, 1, 2, 3, 4, 5, 6, 7, 8].map(angle => [0, 1, 2, 3, 4, 5, 6, 7, 8].map(ring => spiralCell(ring, angle)));
+  const blocks = [];
+  for (let band = 0; band < 3; band++) {
+    for (let wedge = 0; wedge < 3; wedge++) {
+      const block = [];
+      for (let ring = 0; ring < 3; ring++) {
+        for (let angle = 0; angle < 3; angle++) block.push(spiralCell(band * 3 + ring, wedge * 3 + angle));
+      }
+      blocks.push(block);
+    }
+  }
+  return [...rings, ...spokes, ...blocks];
+})();
+const SPIRAL_COLOR = Array.from({ length: SPIRAL_SIZE }, (_, i) => Math.floor((i % 9) / 3) + Math.floor(i / 27) * 3);
+const SPIRAL_PEERS = Array.from({ length: SPIRAL_SIZE }, (_, i) => {
+  const peers = new Set();
+  SPIRAL_GROUPS.forEach(group => {
+    if (group.includes(i)) group.forEach(cell => peers.add(cell));
+  });
   peers.delete(i);
   return [...peers];
 });
@@ -478,6 +591,7 @@ function shuffle(list) {
 }
 
 function newPuzzle() {
+  if (spiralMode) return newSpiralPuzzle();
   const digits = shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9]);
   const map = new Map(digits.map((n, i) => [i + 1, n]));
   const bands = shuffle([0, 1, 2]);
@@ -504,10 +618,34 @@ function newPuzzle() {
   given = new Set(puzzle.map((n, i) => n ? i : -1).filter(i => i >= 0));
 }
 
+function newSpiralPuzzle() {
+  const source = SPIRAL_BOARDS[Math.floor(Math.random() * SPIRAL_BOARDS.length)].slice();
+  const digits = shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  const map = new Map(digits.map((n, i) => [i + 1, n]));
+  const turn = Math.floor(Math.random() * 3) * 3;
+  solution = Array(SPIRAL_SIZE).fill(0);
+  for (let ring = 0; ring < 9; ring++) {
+    for (let angle = 0; angle < 9; angle++) {
+      solution[spiralCell(ring, angle + turn)] = map.get(source[spiralCell(ring, angle)]);
+    }
+  }
+  const puzzle = solution.slice();
+  let removed = 0;
+  shuffle([...Array(SPIRAL_SIZE).keys()]).forEach(i => {
+    if (removed >= emptyCount) return;
+    const saved = puzzle[i];
+    puzzle[i] = 0;
+    if (solutionCount(puzzle, 2) === 1) removed++;
+    else puzzle[i] = saved;
+  });
+  given = new Set(puzzle.map((n, i) => n ? i : -1).filter(i => i >= 0));
+}
+
 function solutionCount(grid, limit) {
   let found = 0;
   const empty = [];
-  for (let i = 0; i < 81; i++) if (!grid[i]) empty.push(i);
+  const size = spiralMode ? SPIRAL_SIZE : 81;
+  for (let i = 0; i < size; i++) if (!grid[i]) empty.push(i);
   function search(step) {
     if (found >= limit) return;
     if (step === empty.length) { found++; return; }
@@ -516,7 +654,8 @@ function solutionCount(grid, limit) {
     for (let s = step; s < empty.length; s++) {
       const i = empty[s];
       let count = 0;
-      const used = new Set(PEERS[i].map(p => grid[p]));
+      const peers = spiralMode ? SPIRAL_PEERS : PEERS;
+      const used = new Set(peers[i].map(p => grid[p]));
       for (let n = 1; n <= 9; n++) if (!used.has(n)) count++;
       if (count < choices) { choices = count; best = s; if (!count) break; }
     }
@@ -524,7 +663,8 @@ function solutionCount(grid, limit) {
     const i = empty[best];
     empty[best] = empty[step];
     empty[step] = i;
-    const used = new Set(PEERS[i].map(p => grid[p]));
+    const peers = spiralMode ? SPIRAL_PEERS : PEERS;
+    const used = new Set(peers[i].map(p => grid[p]));
     for (let n = 1; n <= 9 && found < limit; n++) {
       if (used.has(n)) continue;
       grid[i] = n;
@@ -549,8 +689,11 @@ function start() {
   frozen.clear();
   overlay.hidden = true;
   document.documentElement.style.setProperty("--melt", meltMs + "ms");
-  document.getElementById("playTitle").textContent = iceMode ? "Buzdoku" : "Sudoku";
-  document.getElementById("rule").textContent = LEVELS[emptyCount] + " · " + emptyCount + " boş kutu";
+  const levels = spiralMode ? SPIRAL_LEVELS : LEVELS;
+  document.getElementById("playTitle").textContent = spiralMode ? "Spiral" : (iceMode ? "Buzdoku" : "Sudoku");
+  document.getElementById("rule").textContent = spiralMode
+    ? levels[emptyCount] + " · halka, kol ve blok"
+    : levels[emptyCount] + " · " + emptyCount + " boş kutu";
   clearInterval(timer);
   timer = iceMode ? setInterval(melt, 200) : null;
   build();
@@ -560,11 +703,20 @@ function cellAt(i) {
   return boardEl.querySelector('[data-i="' + i + '"]');
 }
 
+function spiralLabel(n) {
+  const label = document.createElement("b");
+  label.textContent = n || "";
+  if (n === 6 || n === 9) label.dataset.mark = "under";
+  return label;
+}
+
 function paint(i) {
   const cell = cellAt(i);
   const n = values[i];
   cell.classList.remove("given", "ice", "frozen", "selected", "wrong");
   cell.style.removeProperty("--age");
+  cell.style.removeProperty("--tint");
+  if (spiralMode) cell.style.setProperty("--tint", SPIRAL_TINTS[SPIRAL_COLOR[i]]);
   if (given.has(i)) cell.classList.add("given");
   else if (n && (!iceMode || sealed(i))) cell.classList.add(iceMode ? "frozen" : "given");
   else if (n) {
@@ -573,11 +725,84 @@ function paint(i) {
     cell.style.setProperty("--age", Math.min(meltMs, Date.now() - born) + "ms");
   }
   if (i === selected) cell.classList.add("selected");
-  cell.textContent = n || "";
+  cell.textContent = "";
+  if (spiralMode) {
+    cell.appendChild(spiralLabel(n));
+  } else cell.textContent = n || "";
+}
+
+function spiralSlice(i) {
+  const ring = Math.floor(i / 9);
+  const angle = i % 9;
+  const gap = 0.85;
+  const span = (49.6 - 2.4 - gap * 8) / 9;
+  const inner = ring === 0 ? 2.4 : 2.4 + ring * (span + gap) - gap;
+  const outer = 2.4 + ring * (span + gap) + span;
+  const sweep = Math.PI * 2 / 9;
+  const midAngle = -Math.PI / 2 + angle * sweep;
+  const start = midAngle - sweep / 2;
+  const end = start + sweep;
+  const flat = (radius, rad) => {
+    const x = Math.cos(rad);
+    const y = Math.sin(rad);
+    const edge = Math.cos(sweep / 2) / Math.max(Math.cos(rad - midAngle), 0.001);
+    return [50 + radius * x * edge, 50 + radius * y * edge];
+  };
+  const outerPoints = [0, 1].map(n => flat(outer, start + (end - start) * n));
+  const innerPoints = inner === 0
+    ? [[50, 50]]
+    : [1, 0].map(n => flat(inner, start + (end - start) * n));
+  const points = [...outerPoints, ...innerPoints].map(point => point[0].toFixed(2) + "% " + point[1].toFixed(2) + "%");
+  const label = (inner + outer) / 2;
+  const mid = flat(label, midAngle);
+  let spin = midAngle * 180 / Math.PI;
+  while (spin > 90) spin -= 180;
+  while (spin <= -90) spin += 180;
+  return {
+    clip: "polygon(" + points.join(",") + ")",
+    x: mid[0] - 50,
+    y: mid[1] - 50,
+    spin: Math.round(spin)
+  };
 }
 
 function build() {
+  boardEl.classList.toggle("spiral", spiralMode);
+  const legend = document.getElementById("legend");
+  legend.hidden = !spiralMode;
+  legend.innerHTML = spiralMode
+    ? '<span>Her halka, kol ve 3×3 blok 1–9</span>'
+    : "";
   boardEl.innerHTML = "";
+  if (spiralMode) {
+    values.forEach((n, i) => {
+      const cell = document.createElement("button");
+      cell.type = "button";
+      cell.className = "cell";
+      cell.dataset.i = i;
+      const slice = spiralSlice(i);
+      cell.style.setProperty("--slice", slice.clip);
+      cell.style.setProperty("--lx", slice.x.toFixed(2) + "%");
+      cell.style.setProperty("--ly", slice.y.toFixed(2) + "%");
+      cell.style.setProperty("--spin", slice.spin + "deg");
+      if (i < 9) cell.style.setProperty("--scale", "0.86");
+      cell.setAttribute("aria-label", "Spiral kutu " + (i + 1));
+      cell.addEventListener("click", () => select(i));
+      boardEl.appendChild(cell);
+      paint(i);
+    });
+    padEl.innerHTML = "";
+    for (let n = 1; n <= 9; n++) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = n;
+      button.setAttribute("aria-label", n + " yaz");
+      button.addEventListener("click", () => place(n));
+      padEl.appendChild(button);
+    }
+    refresh();
+    return;
+  }
   const blocks = Array.from({ length: 9 }, () => {
     const block = document.createElement("div");
     block.className = "block";
@@ -613,7 +838,7 @@ function build() {
 
 function refresh() {
   for (let n = 1; n <= 9; n++) {
-    padEl.children[n - 1].disabled = values.filter(v => v === n).length >= 9;
+    padEl.children[n - 1].disabled = !spiralMode && values.filter(v => v === n).length >= 9;
   }
   [...livesEl.children].forEach((heart, i) => heart.classList.toggle("off", i >= lives));
   livesEl.setAttribute("aria-label", lives + " can");
@@ -635,10 +860,17 @@ function place(n) {
   if (n !== solution[selected]) {
     const cell = cellAt(selected);
     cell.classList.add("wrong");
-    cell.textContent = n;
+    if (spiralMode) {
+      const label = cell.querySelector("b");
+      label.textContent = n;
+      if (n === 6 || n === 9) label.dataset.mark = "under";
+      else delete label.dataset.mark;
+    }
+    else cell.textContent = n;
     lives -= 1;
     [...livesEl.children].forEach((heart, i) => heart.classList.toggle("off", i >= lives));
     livesEl.setAttribute("aria-label", lives + " can");
+    document.getElementById("undo").disabled = true;
     setTimeout(() => { if (!over) paint(selected); }, 250);
     if (lives <= 0) finish(false);
     return;
@@ -826,12 +1058,25 @@ function show(screen) {
   settings.hidden = screen !== "settings";
   playview.hidden = screen !== "play";
 }
-document.getElementById("play").addEventListener("click", () => { iceMode = false; show("difficulty"); });
-document.getElementById("playIce").addEventListener("click", () => { iceMode = true; show("difficulty"); });
+function showDifficulty(mode) {
+  iceMode = mode === "ice";
+  spiralMode = mode === "spiral";
+  const levels = spiralMode ? SPIRAL_LEVELS : LEVELS;
+  document.querySelectorAll("#difficulty [data-empty]").forEach(button => {
+    const count = Number(button.dataset.empty);
+    const empty = spiralMode ? { 35: 28, 45: 40, 53: 50 }[count] : count;
+    button.dataset.playEmpty = empty;
+    button.innerHTML = levels[empty] + " <small>" + empty + " boş</small>";
+  });
+  show("difficulty");
+}
+document.getElementById("play").addEventListener("click", () => showDifficulty("classic"));
+document.getElementById("playIce").addEventListener("click", () => showDifficulty("ice"));
+document.getElementById("playSpiral").addEventListener("click", () => showDifficulty("spiral"));
 document.getElementById("closeDifficulty").addEventListener("click", () => show("home"));
 document.querySelectorAll("#difficulty [data-empty]").forEach(button => {
   button.addEventListener("click", () => {
-    emptyCount = Number(button.dataset.empty);
+    emptyCount = Number(button.dataset.playEmpty || button.dataset.empty);
     show("play");
     start();
   });
