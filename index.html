@@ -286,6 +286,78 @@
   .board.spiral .cell.given { background: color-mix(in srgb, var(--tint) 46%, white); }
   .board.spiral .cell.selected { background: #fff4e8; box-shadow: none; z-index: 2; }
   .board.spiral .cell.wrong { color: white; background: var(--accent); }
+
+  /* ── Spiral completion animations ── */
+  .board.spiral .cell.spiral-ring-done {
+    animation: spiralRingPulse .7s cubic-bezier(.2,.8,.2,1) both;
+    animation-delay: var(--anim-delay, 0ms);
+    z-index: 3;
+  }
+  .board.spiral .cell.spiral-spoke-done {
+    animation: spiralSpokePulse .7s cubic-bezier(.2,.8,.2,1) both;
+    animation-delay: var(--anim-delay, 0ms);
+    z-index: 3;
+  }
+  .board.spiral .cell.spiral-color-done {
+    animation: spiralColorPulse .85s cubic-bezier(.2,.8,.2,1) both;
+    animation-delay: var(--anim-delay, 0ms);
+    z-index: 3;
+  }
+  @keyframes spiralRingPulse {
+    0%   { filter: brightness(1) drop-shadow(0 0 0 transparent); }
+    35%  { filter: brightness(1.35) drop-shadow(0 0 8px rgba(31,126,214,.7)); }
+    100% { filter: brightness(1) drop-shadow(0 0 0 transparent); }
+  }
+  @keyframes spiralSpokePulse {
+    0%   { filter: brightness(1) drop-shadow(0 0 0 transparent); }
+    35%  { filter: brightness(1.35) drop-shadow(0 0 8px rgba(47,158,68,.7)); }
+    100% { filter: brightness(1) drop-shadow(0 0 0 transparent); }
+  }
+  @keyframes spiralColorPulse {
+    0%   { filter: brightness(1) drop-shadow(0 0 0 transparent); transform: scale(1); }
+    25%  { filter: brightness(1.5) drop-shadow(0 0 12px var(--tint)); transform: scale(1.04); }
+    50%  { filter: brightness(1.3) drop-shadow(0 0 6px var(--tint)); transform: scale(1.02); }
+    100% { filter: brightness(1) drop-shadow(0 0 0 transparent); transform: scale(1); }
+  }
+
+  /* Spiral completion banner */
+  .spiral-banner {
+    position: absolute;
+    z-index: 10;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    padding: 8px 18px;
+    border-radius: 20px;
+    font: 800 14px Nunito, sans-serif;
+    color: #fff;
+    pointer-events: none;
+    white-space: nowrap;
+    animation: spiralBannerPop .8s cubic-bezier(.2,.8,.2,1) both;
+  }
+  .spiral-banner.ring  { background: rgba(31,126,214,.88); box-shadow: 0 4px 16px rgba(31,126,214,.4); }
+  .spiral-banner.spoke { background: rgba(47,158,68,.88); box-shadow: 0 4px 16px rgba(47,158,68,.4); }
+  .spiral-banner.color { background: rgba(156,54,181,.88); box-shadow: 0 4px 16px rgba(156,54,181,.4); }
+  @keyframes spiralBannerPop {
+    0%   { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+    25%  { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+    40%  { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    80%  { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    100% { transform: translate(-50%, -60%) scale(.9); opacity: 0; }
+  }
+
+  /* Confetti particles for spiral */
+  .spiral-confetti {
+    position: absolute;
+    z-index: 9;
+    width: 6px; height: 6px;
+    border-radius: 2px;
+    pointer-events: none;
+    animation: spiralConfettiFall 1s cubic-bezier(.25,.46,.45,.94) forwards;
+  }
+  @keyframes spiralConfettiFall {
+    0%   { opacity: 1; transform: translate(0, 0) rotate(0deg) scale(1); }
+    100% { opacity: 0; transform: translate(var(--cx), var(--cy)) rotate(720deg) scale(0.3); }
+  }
   .legend {
     display: flex;
     flex-wrap: wrap;
@@ -578,8 +650,107 @@ const SPIRAL_PEERS = Array.from({ length: SPIRAL_SIZE }, (_, i) => {
   peers.delete(i);
   return [...peers];
 });
-let solution = BASE.slice();
-let given = new Set();
+
+// Separate ring/spoke arrays for animation classification
+const SPIRAL_RINGS = [0, 1, 2, 3, 4, 5, 6, 7, 8].map(ring =>
+  [0, 1, 2, 3, 4, 5, 6, 7, 8].map(angle => spiralCell(ring, angle))
+);
+const SPIRAL_SPOKES = [0, 1, 2, 3, 4, 5, 6, 7, 8].map(angle =>
+  [0, 1, 2, 3, 4, 5, 6, 7, 8].map(ring => spiralCell(ring, angle))
+);
+// Color groups: cells sharing the same SPIRAL_COLOR
+const SPIRAL_COLOR_GROUPS = (() => {
+  const groups = Array.from({ length: 9 }, () => []);
+  for (let i = 0; i < SPIRAL_SIZE; i++) groups[SPIRAL_COLOR[i]].push(i);
+  return groups;
+})();
+
+// Track which groups have already fired their animation
+const spiralCompletedGroups = new Set();
+
+function spiralCompletions(placed) {
+  const results = [];
+  // Check rings
+  SPIRAL_RINGS.forEach((group, idx) => {
+    const key = "ring-" + idx;
+    if (!spiralCompletedGroups.has(key) && group.includes(placed) && group.every(i => values[i] !== 0)) {
+      spiralCompletedGroups.add(key);
+      results.push({ type: "ring", cells: group, label: "Halka " + (idx + 1) + " ✓" });
+    }
+  });
+  // Check spokes
+  SPIRAL_SPOKES.forEach((group, idx) => {
+    const key = "spoke-" + idx;
+    if (!spiralCompletedGroups.has(key) && group.includes(placed) && group.every(i => values[i] !== 0)) {
+      spiralCompletedGroups.add(key);
+      results.push({ type: "spoke", cells: group, label: "Kol " + (idx + 1) + " ✓" });
+    }
+  });
+  // Check color groups
+  SPIRAL_COLOR_GROUPS.forEach((group, idx) => {
+    const key = "color-" + idx;
+    if (!spiralCompletedGroups.has(key) && group.includes(placed) && group.every(i => values[i] !== 0)) {
+      spiralCompletedGroups.add(key);
+      results.push({ type: "color", cells: group, label: "Renk tamamlandı ★" });
+    }
+  });
+  return results;
+}
+
+function animateSpiralCompletion(completions) {
+  let bannerDelay = 0;
+  completions.forEach(comp => {
+    const cssClass = "spiral-" + comp.type + "-done";
+    comp.cells.forEach((ci, order) => {
+      const cell = cellAt(ci);
+      if (!cell) return;
+      cell.classList.remove(cssClass);
+      void cell.offsetWidth; // force reflow
+      cell.style.setProperty("--anim-delay", (bannerDelay + order * 45) + "ms");
+      cell.classList.add(cssClass);
+      cell.addEventListener("animationend", () => {
+        cell.classList.remove(cssClass);
+        cell.style.removeProperty("--anim-delay");
+      }, { once: true });
+    });
+    // Show banner
+    setTimeout(() => showSpiralBanner(comp.type, comp.label), bannerDelay + 80);
+    // Spawn confetti
+    setTimeout(() => spawnSpiralConfetti(comp.type), bannerDelay + 120);
+    bannerDelay += 600;
+  });
+}
+
+function showSpiralBanner(type, text) {
+  const banner = document.createElement("div");
+  banner.className = "spiral-banner " + type;
+  banner.textContent = text;
+  boardEl.appendChild(banner);
+  banner.addEventListener("animationend", () => banner.remove());
+}
+
+function spawnSpiralConfetti(type) {
+  const colors = {
+    ring:  ["#1f7ed6", "#5ba3e6", "#a0d0f5", "#fff"],
+    spoke: ["#2f9e44", "#5bc46a", "#a0e8aa", "#fff"],
+    color: ["#9c36b5", "#c46ad8", "#e0a0f0", "#fff"]
+  };
+  const palette = colors[type] || colors.ring;
+  for (let p = 0; p < 14; p++) {
+    const dot = document.createElement("div");
+    dot.className = "spiral-confetti";
+    dot.style.background = palette[p % palette.length];
+    dot.style.left = "50%";
+    dot.style.top = "50%";
+    const angle = (Math.PI * 2 / 14) * p + Math.random() * 0.5;
+    const dist = 50 + Math.random() * 80;
+    dot.style.setProperty("--cx", Math.cos(angle) * dist + "px");
+    dot.style.setProperty("--cy", Math.sin(angle) * dist + "px");
+    dot.style.animationDelay = (Math.random() * 100) + "ms";
+    boardEl.appendChild(dot);
+    dot.addEventListener("animationend", () => dot.remove());
+  }
+}
 
 const boardEl = document.getElementById("board");
 const padEl = document.getElementById("pad");
@@ -596,6 +767,8 @@ let meltMs = Number(localStorage.getItem("meltoku-melt")) || 9000;
 const placedAt = new Map();
 const history = [];
 const frozen = new Set();
+let solution = BASE.slice();
+let given = new Set();
 
 function shuffle(list) {
   for (let i = list.length - 1; i > 0; i--) {
@@ -702,6 +875,7 @@ function start() {
   placedAt.clear();
   history.length = 0;
   frozen.clear();
+  spiralCompletedGroups.clear();
   overlay.hidden = true;
   document.documentElement.style.setProperty("--melt", meltMs + "ms");
   const levels = spiralMode ? SPIRAL_LEVELS : LEVELS;
@@ -922,6 +1096,11 @@ function place(n) {
     });
     sweep(line);
   });
+  // Spiral completion animations
+  if (spiralMode) {
+    const completions = spiralCompletions(placed);
+    if (completions.length) animateSpiralCompletion(completions);
+  }
   refresh();
   if (values.every(v => v !== 0)) finish(true);
 }
@@ -1031,6 +1210,13 @@ document.getElementById("undo").addEventListener("click", () => {
   values[index] = 0;
   placedAt.delete(index);
   frozen.forEach(i => { if (!sealed(i)) frozen.delete(i); });
+  // Recalculate spiral completed groups after undo
+  if (spiralMode) {
+    spiralCompletedGroups.clear();
+    SPIRAL_RINGS.forEach((group, idx) => { if (group.every(i => values[i] !== 0)) spiralCompletedGroups.add("ring-" + idx); });
+    SPIRAL_SPOKES.forEach((group, idx) => { if (group.every(i => values[i] !== 0)) spiralCompletedGroups.add("spoke-" + idx); });
+    SPIRAL_COLOR_GROUPS.forEach((group, idx) => { if (group.every(i => values[i] !== 0)) spiralCompletedGroups.add("color-" + idx); });
+  }
   selected = index;
   values.forEach((_, i) => paint(i));
   refresh();
