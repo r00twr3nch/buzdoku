@@ -508,6 +508,232 @@
     *, *::before, *::after { animation: none !important; transition: none !important; }
     .gate { display: none; }
   }
+
+  /* ── Win Screen ── */
+  .win-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 18;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .3s ease;
+  }
+  .win-screen.active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .win-screen.dismiss {
+    opacity: 0;
+    transition: opacity .5s ease;
+  }
+
+  /* Shared background */
+  .win-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+
+  /* Classic Sudoku - golden warm */
+  .win-screen.classic .win-bg {
+    background: radial-gradient(circle at 50% 40%, #fff8e1 0%, #ffcc02 35%, #ff8f00 100%);
+  }
+  /* Buzdoku - icy blue */
+  .win-screen.ice .win-bg {
+    background: radial-gradient(circle at 50% 40%, #f0faff 0%, #7ec8e3 35%, #145374 100%);
+  }
+  /* Spiral - purple rainbow */
+  .win-screen.spiral .win-bg {
+    background: conic-gradient(from 0deg at 50% 50%, #e23b3b, #f08c00, #f59f00, #2f9e44, #0ca678, #1c7ed6, #1971c2, #9c36b5, #e8590c, #e23b3b);
+    animation: winSpiralBgSpin 4s linear infinite;
+    opacity: .65;
+  }
+  @keyframes winSpiralBgSpin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* Glow overlay */
+  .win-glow {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    opacity: 0;
+    animation: winGlowPulse 2s ease-in-out infinite alternate;
+  }
+  .win-screen.active .win-glow { animation-delay: .3s; }
+  .win-screen.classic .win-glow {
+    background: radial-gradient(circle at 50% 45%, rgba(255,255,255,.7) 0%, transparent 65%);
+  }
+  .win-screen.ice .win-glow {
+    background: radial-gradient(circle at 50% 45%, rgba(255,255,255,.85) 0%, transparent 55%);
+  }
+  .win-screen.spiral .win-glow {
+    background: radial-gradient(circle at 50% 45%, rgba(255,255,255,.9) 0%, transparent 50%);
+  }
+  @keyframes winGlowPulse {
+    from { opacity: .5; }
+    to   { opacity: 1; }
+  }
+
+  /* Main icon area */
+  .win-icon {
+    position: relative;
+    z-index: 2;
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 56px;
+    margin-bottom: 18px;
+    transform: scale(0);
+    animation: winIconPop .7s cubic-bezier(.2,1.2,.4,1) .15s forwards;
+  }
+  .win-screen.classic .win-icon {
+    background: linear-gradient(145deg, #fff8e1, #ffd54f);
+    box-shadow: 0 0 40px rgba(255,193,7,.5), 0 8px 0 #f9a825, inset 0 -4px 0 rgba(0,0,0,.08);
+    color: #e65100;
+  }
+  .win-screen.ice .win-icon {
+    background: linear-gradient(145deg, #e3f6ff, #81d4fa);
+    box-shadow: 0 0 40px rgba(3,169,244,.4), 0 8px 0 #0288d1, inset 0 -4px 0 rgba(0,0,0,.06);
+    color: #01579b;
+  }
+  .win-screen.spiral .win-icon {
+    background: linear-gradient(145deg, #f3e5f5, #ce93d8);
+    box-shadow: 0 0 40px rgba(156,39,176,.4), 0 8px 0 #7b1fa2, inset 0 -4px 0 rgba(0,0,0,.08);
+    color: #4a148c;
+    animation: winIconPop .7s cubic-bezier(.2,1.2,.4,1) .15s forwards,
+               winIconSpin 3s linear 1s infinite;
+  }
+  @keyframes winIconPop {
+    from { transform: scale(0) rotate(-20deg); }
+    to   { transform: scale(1) rotate(0deg); }
+  }
+  @keyframes winIconSpin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+
+  /* Title text */
+  .win-title {
+    position: relative;
+    z-index: 2;
+    font: 900 clamp(36px, 10vw, 56px)/1 Nunito, sans-serif;
+    letter-spacing: -2px;
+    text-align: center;
+    margin: 0 0 6px;
+    transform: translateY(30px);
+    opacity: 0;
+    animation: winTextUp .55s cubic-bezier(.2,.8,.3,1) .4s forwards;
+  }
+  .win-screen.classic .win-title { color: #fff; text-shadow: 0 3px 0 #e65100, 0 0 30px rgba(255,193,7,.6); }
+  .win-screen.ice .win-title     { color: #fff; text-shadow: 0 3px 0 #0277bd, 0 0 30px rgba(3,169,244,.5); }
+  .win-screen.spiral .win-title  { color: #fff; text-shadow: 0 3px 0 #6a1b9a, 0 0 30px rgba(156,39,176,.5); }
+
+  .win-subtitle {
+    position: relative;
+    z-index: 2;
+    font: 800 clamp(14px, 4vw, 18px)/1.3 Nunito, sans-serif;
+    text-align: center;
+    margin: 0;
+    transform: translateY(20px);
+    opacity: 0;
+    animation: winTextUp .5s cubic-bezier(.2,.8,.3,1) .6s forwards;
+  }
+  .win-screen.classic .win-subtitle { color: rgba(255,255,255,.85); }
+  .win-screen.ice .win-subtitle     { color: rgba(255,255,255,.8); }
+  .win-screen.spiral .win-subtitle  { color: rgba(255,255,255,.85); }
+
+  @keyframes winTextUp {
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  /* Particles container */
+  .win-particles {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  /* Classic: floating golden numbers */
+  .win-particle {
+    position: absolute;
+    font: 900 var(--wp-size, 28px) Nunito, sans-serif;
+    opacity: 0;
+    pointer-events: none;
+    animation: winParticleFloat var(--wp-dur, 3s) ease-out var(--wp-delay, 0s) forwards;
+  }
+  .win-screen.classic .win-particle { color: rgba(255,255,255,.55); text-shadow: 0 0 8px rgba(255,193,7,.5); }
+  .win-screen.ice .win-particle     { color: rgba(255,255,255,.6); text-shadow: 0 0 8px rgba(3,169,244,.4); }
+  .win-screen.spiral .win-particle  { color: rgba(255,255,255,.5); text-shadow: 0 0 10px var(--wp-tint, #9c36b5); }
+
+  @keyframes winParticleFloat {
+    0%   { opacity: 0; transform: translateY(0) rotate(0deg) scale(.5); }
+    15%  { opacity: .8; }
+    100% { opacity: 0; transform: translateY(var(--wp-travel, -300px)) rotate(var(--wp-rot, 180deg)) scale(1.2); }
+  }
+
+  /* Ice mode: snowflake particles */
+  .win-snowflake {
+    position: absolute;
+    font-size: var(--sf-size, 20px);
+    opacity: 0;
+    pointer-events: none;
+    animation: winSnowFall var(--sf-dur, 3.5s) ease-in var(--sf-delay, 0s) forwards;
+    color: rgba(255,255,255,.7);
+  }
+  @keyframes winSnowFall {
+    0%   { opacity: 0; transform: translateY(-30px) rotate(0deg); }
+    10%  { opacity: .9; }
+    100% { opacity: 0; transform: translateY(var(--sf-travel, 500px)) rotate(360deg); }
+  }
+
+  /* Spiral mode: color orbs */
+  .win-orb {
+    position: absolute;
+    width: var(--orb-size, 14px);
+    height: var(--orb-size, 14px);
+    border-radius: 50%;
+    background: var(--orb-color, #9c36b5);
+    box-shadow: 0 0 12px var(--orb-color, #9c36b5);
+    opacity: 0;
+    pointer-events: none;
+    animation: winOrbSpiral var(--orb-dur, 2.5s) cubic-bezier(.3,0,.2,1) var(--orb-delay, 0s) forwards;
+  }
+  @keyframes winOrbSpiral {
+    0%   { opacity: 0; transform: translate(0,0) scale(0); }
+    20%  { opacity: 1; transform: translate(var(--orb-x1, 30px), var(--orb-y1, -40px)) scale(1); }
+    60%  { opacity: .8; transform: translate(var(--orb-x2, 80px), var(--orb-y2, -100px)) scale(1.2); }
+    100% { opacity: 0; transform: translate(var(--orb-x3, 120px), var(--orb-y3, -180px)) scale(.4); }
+  }
+
+  /* Stars burst - all modes */
+  .win-star {
+    position: absolute;
+    left: 50%; top: 40%;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: 0;
+    animation: winStarBurst .9s cubic-bezier(.2,.8,.2,1) var(--star-delay, 0s) forwards;
+  }
+  .win-screen.classic .win-star { background: #fff; box-shadow: 0 0 6px #ffd54f; }
+  .win-screen.ice .win-star     { background: #fff; box-shadow: 0 0 6px #4fc3f7; }
+  .win-screen.spiral .win-star  { background: var(--star-color, #fff); box-shadow: 0 0 8px var(--star-color, #ce93d8); }
+
+  @keyframes winStarBurst {
+    0%   { opacity: 0; transform: translate(-50%,-50%) translate(0,0) scale(0); }
+    30%  { opacity: 1; transform: translate(-50%,-50%) translate(var(--star-x), var(--star-y)) scale(1.5); }
+    100% { opacity: 0; transform: translate(-50%,-50%) translate(var(--star-x2), var(--star-y2)) scale(.3); }
+  }
 </style>
 </head>
 <body>
@@ -588,6 +814,14 @@
     <p id="endText"></p>
     <button id="again" type="button">Tekrar dene</button>
   </div>
+</div>
+<div class="win-screen" id="winScreen">
+  <div class="win-bg"></div>
+  <div class="win-glow"></div>
+  <div class="win-particles" id="winParticles"></div>
+  <div class="win-icon" id="winIcon"></div>
+  <h2 class="win-title" id="winTitle"></h2>
+  <p class="win-subtitle" id="winSubtitle"></p>
 </div>
 <script>
 const BASE = [
@@ -763,6 +997,8 @@ let selected = 0;
 let lives = 3;
 let over = false;
 let timer = null;
+let winTimer = null;
+const winScreenEl = document.getElementById("winScreen");
 let meltMs = Number(localStorage.getItem("meltoku-melt")) || 9000;
 const placedAt = new Map();
 const history = [];
@@ -877,6 +1113,12 @@ function start() {
   frozen.clear();
   spiralCompletedGroups.clear();
   overlay.hidden = true;
+  clearTimeout(winTimer);
+  if (winScreenEl) {
+    winScreenEl.className = "win-screen";
+    const particles = document.getElementById("winParticles");
+    if (particles) particles.innerHTML = "";
+  }
   document.documentElement.style.setProperty("--melt", meltMs + "ms");
   const levels = spiralMode ? SPIRAL_LEVELS : LEVELS;
   document.getElementById("playTitle").textContent = spiralMode ? "Spiral" : (iceMode ? "Buzdoku" : "Sudoku");
@@ -1183,7 +1425,164 @@ function finish(won) {
   document.getElementById("endText").textContent = won
     ? "Canın bitmeden tahtayı kapattın."
     : (iceMode ? "Üç yanlış. Buz tahtayı senden önce sildi." : "Üç yanlış. Yeni bir tahta dene.");
-  overlay.hidden = false;
+  if (won) {
+    showWinScreen(() => { overlay.hidden = false; });
+  } else {
+    overlay.hidden = false;
+  }
+}
+
+function showWinScreen(onDone) {
+  const ws = document.getElementById("winScreen");
+  const particles = document.getElementById("winParticles");
+  const icon = document.getElementById("winIcon");
+  const title = document.getElementById("winTitle");
+  const subtitle = document.getElementById("winSubtitle");
+
+  // Reset
+  ws.className = "win-screen";
+  particles.innerHTML = "";
+  icon.style.animation = "none";
+  void icon.offsetWidth;
+  icon.style.animation = "";
+
+  // Mode class & content
+  const mode = spiralMode ? "spiral" : (iceMode ? "ice" : "classic");
+  ws.classList.add(mode);
+
+  const config = {
+    classic: { icon: "🏆", title: "Tebrikler!", subtitle: "Sudoku tahtasını başarıyla tamamladın!" },
+    ice:     { icon: "☀️", title: "Buz Eridi!", subtitle: "Buz erimeden tahtayı kapattın!" },
+    spiral:  { icon: "🌀", title: "Spiral Usta!", subtitle: "Tüm halkalar ve kollar tamamlandı!" }
+  };
+  icon.textContent = config[mode].icon;
+  title.textContent = config[mode].title;
+  subtitle.textContent = config[mode].subtitle;
+
+  // Spawn star burst (all modes)
+  spawnWinStars(particles, mode);
+
+  // Mode-specific particles
+  if (mode === "classic") spawnWinNumbers(particles);
+  else if (mode === "ice") spawnWinSnowflakes(particles);
+  else spawnWinOrbs(particles);
+
+  // Floating numbers/digits (all modes)
+  spawnWinFloatingDigits(particles, mode);
+
+  // Activate
+  ws.classList.add("active");
+
+  // Dismiss after delay and show overlay
+  clearTimeout(winTimer);
+  winTimer = setTimeout(() => {
+    ws.classList.add("dismiss");
+    winTimer = setTimeout(() => {
+      ws.classList.remove("active", "dismiss", mode);
+      particles.innerHTML = "";
+      if (onDone) onDone();
+    }, 500);
+  }, 2800);
+}
+
+function spawnWinStars(container, mode) {
+  const SPIRAL_TINTS_REF = ["#e23b3b","#1c7ed6","#f08c00","#2f9e44","#9c36b5","#0ca678","#e8590c","#1971c2","#f59f00"];
+  for (let i = 0; i < 20; i++) {
+    const star = document.createElement("div");
+    star.className = "win-star";
+    const angle = (Math.PI * 2 / 20) * i + (Math.random() - .5) * .4;
+    const dist1 = 60 + Math.random() * 60;
+    const dist2 = dist1 + 40 + Math.random() * 60;
+    star.style.setProperty("--star-x", Math.cos(angle) * dist1 + "px");
+    star.style.setProperty("--star-y", Math.sin(angle) * dist1 + "px");
+    star.style.setProperty("--star-x2", Math.cos(angle) * dist2 + "px");
+    star.style.setProperty("--star-y2", Math.sin(angle) * dist2 + "px");
+    star.style.setProperty("--star-delay", (.1 + Math.random() * .4) + "s");
+    if (mode === "spiral") {
+      star.style.setProperty("--star-color", SPIRAL_TINTS_REF[i % 9]);
+    }
+    star.style.width = (4 + Math.random() * 6) + "px";
+    star.style.height = star.style.width;
+    container.appendChild(star);
+  }
+}
+
+function spawnWinNumbers(container) {
+  for (let i = 0; i < 18; i++) {
+    const p = document.createElement("div");
+    p.className = "win-particle";
+    p.textContent = (i % 9) + 1;
+    p.style.left = (5 + Math.random() * 90) + "%";
+    p.style.bottom = (-5 - Math.random() * 10) + "%";
+    p.style.setProperty("--wp-size", (20 + Math.random() * 24) + "px");
+    p.style.setProperty("--wp-dur", (2.5 + Math.random() * 2) + "s");
+    p.style.setProperty("--wp-delay", (Math.random() * 1.5) + "s");
+    p.style.setProperty("--wp-travel", -(200 + Math.random() * 400) + "px");
+    p.style.setProperty("--wp-rot", (90 + Math.random() * 270) + "deg");
+    container.appendChild(p);
+  }
+}
+
+function spawnWinSnowflakes(container) {
+  const flakes = ["❄", "❅", "❆", "✦", "✧"];
+  for (let i = 0; i < 24; i++) {
+    const sf = document.createElement("div");
+    sf.className = "win-snowflake";
+    sf.textContent = flakes[i % flakes.length];
+    sf.style.left = (Math.random() * 100) + "%";
+    sf.style.top = (-5 - Math.random() * 15) + "%";
+    sf.style.setProperty("--sf-size", (14 + Math.random() * 22) + "px");
+    sf.style.setProperty("--sf-dur", (2.5 + Math.random() * 3) + "s");
+    sf.style.setProperty("--sf-delay", (Math.random() * 2) + "s");
+    sf.style.setProperty("--sf-travel", (300 + Math.random() * 400) + "px");
+    container.appendChild(sf);
+  }
+}
+
+function spawnWinOrbs(container) {
+  const SPIRAL_TINTS_REF = ["#e23b3b","#1c7ed6","#f08c00","#2f9e44","#9c36b5","#0ca678","#e8590c","#1971c2","#f59f00"];
+  for (let i = 0; i < 22; i++) {
+    const orb = document.createElement("div");
+    orb.className = "win-orb";
+    const color = SPIRAL_TINTS_REF[i % 9];
+    const angle = (Math.PI * 2 / 22) * i;
+    const r1 = 50 + Math.random() * 40;
+    const r2 = r1 + 60 + Math.random() * 40;
+    const r3 = r2 + 50 + Math.random() * 50;
+    orb.style.left = "50%";
+    orb.style.top = "45%";
+    orb.style.setProperty("--orb-color", color);
+    orb.style.setProperty("--orb-size", (8 + Math.random() * 14) + "px");
+    orb.style.setProperty("--orb-dur", (2 + Math.random() * 1.5) + "s");
+    orb.style.setProperty("--orb-delay", (Math.random() * 1) + "s");
+    orb.style.setProperty("--orb-x1", Math.cos(angle) * r1 + "px");
+    orb.style.setProperty("--orb-y1", Math.sin(angle) * r1 + "px");
+    orb.style.setProperty("--orb-x2", Math.cos(angle + .3) * r2 + "px");
+    orb.style.setProperty("--orb-y2", Math.sin(angle + .3) * r2 + "px");
+    orb.style.setProperty("--orb-x3", Math.cos(angle + .6) * r3 + "px");
+    orb.style.setProperty("--orb-y3", Math.sin(angle + .6) * r3 + "px");
+    container.appendChild(orb);
+  }
+}
+
+function spawnWinFloatingDigits(container, mode) {
+  const SPIRAL_TINTS_REF = ["#e23b3b","#1c7ed6","#f08c00","#2f9e44","#9c36b5","#0ca678","#e8590c","#1971c2","#f59f00"];
+  for (let i = 0; i < 12; i++) {
+    const p = document.createElement("div");
+    p.className = "win-particle";
+    p.textContent = (i % 9) + 1;
+    p.style.left = (8 + Math.random() * 84) + "%";
+    p.style.top = (60 + Math.random() * 35) + "%";
+    p.style.setProperty("--wp-size", (16 + Math.random() * 18) + "px");
+    p.style.setProperty("--wp-dur", (2.8 + Math.random() * 2) + "s");
+    p.style.setProperty("--wp-delay", (.3 + Math.random() * 1.8) + "s");
+    p.style.setProperty("--wp-travel", -(250 + Math.random() * 350) + "px");
+    p.style.setProperty("--wp-rot", (120 + Math.random() * 240) + "deg");
+    if (mode === "spiral") {
+      p.style.setProperty("--wp-tint", SPIRAL_TINTS_REF[i % 9]);
+    }
+    container.appendChild(p);
+  }
 }
 
 function hint() {
@@ -1198,7 +1597,13 @@ function hint() {
 function leave() {
   over = true;
   clearInterval(timer);
+  clearTimeout(winTimer);
   overlay.hidden = true;
+  if (winScreenEl) {
+    winScreenEl.className = "win-screen";
+    const particles = document.getElementById("winParticles");
+    if (particles) particles.innerHTML = "";
+  }
   show("home");
 }
 
