@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sudoku</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #16324a;
+    --muted: #5d7d96;
+    --paper: #8fd4ef;
+    --tile: #fffdf8;
+    --accent: #ff7a59;
+    --ice: #2f6f9a;
+    --dock: #123044;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    background:
+      radial-gradient(120px 80px at 12% 8%, #fff, transparent 70%),
+      radial-gradient(90px 60px at 78% 16%, #fff, transparent 70%),
+      radial-gradient(140px 90px at 90% 42%, rgba(255,255,255,.7), transparent 70%),
+      linear-gradient(180deg, #d9f4ff 0 18%, var(--paper) 46%, #67b7df);
+    color: var(--ink);
+    font-family: Nunito, "Segoe UI", sans-serif;
+    font-size: 16px;
+    display: flex;
+    justify-content: center;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: .045;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .gate {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: grid;
+    place-items: center;
+    background: #102033;
+    color: white;
+    font-family: Nunito, sans-serif;
+    font-weight: 900;
+    font-size: clamp(48px, 12vw, 120px);
+    letter-spacing: -3px;
+    animation: gate 1.15s cubic-bezier(.7, 0, .2, 1) .35s forwards;
+  }
+  .gate span { display: inline-block; animation: sweep-in .7s cubic-bezier(.2, .8, .2, 1) both; }
+  .gate span:nth-child(2) { animation-delay: .08s; color: #8fd4f2; }
+  .gate span:nth-child(3) { animation-delay: .16s; }
+  @keyframes sweep-in { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: none; } }
+  @keyframes gate { to { transform: translateY(-105%); } }
+  main {
+    width: min(430px, 100%);
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    padding: max(14px, env(safe-area-inset-top)) 14px calc(18px + env(safe-area-inset-bottom));
+    animation: rise .6s cubic-bezier(.2, .8, .2, 1) .45s both;
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+  header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .title { flex: 1; min-width: 0; }
+  #leave {
+    width: 46px;
+    height: 46px;
+    flex: none;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 16px;
+    background: #fff4e8;
+    color: #c44b30;
+    box-shadow: 0 4px 0 #f0c2b4;
+    cursor: pointer;
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  #leave svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+  #leave:active { transform: translateY(3px); box-shadow: 0 1px 0 #f0c2b4; }
+  #leave:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+  h1 { margin: 0; font-size: 34px; font-weight: 900; letter-spacing: -1px; line-height: 1; }
+  h1 span { color: #fff; -webkit-text-stroke: 0; }
+  .tag { margin: 2px 0 0; color: #24516d; font-size: 13px; font-weight: 800; }
+  .hud { display: flex; align-items: center; gap: 8px; }
+  .hearts { display: flex; gap: 4px; height: 28px; }
+  .hearts i {
+    width: 24px;
+    height: 22px;
+    background: #ff5d73;
+    clip-path: path("M12 21 2.5 11.2A6 6 0 0 1 12 4a6 6 0 0 1 9.5 7.2Z");
+    filter: drop-shadow(0 2px 0 #c4324b);
+    transition: transform .2s ease, opacity .2s ease;
+  }
+  .hearts i.off { opacity: .28; transform: scale(.8); filter: none; background: #fff; }
+  .chip {
+    min-width: 58px;
+    height: 42px;
+    padding: 4px 10px;
+    border-radius: 14px;
+    background: #fff;
+    text-align: center;
+    box-shadow: 0 4px 0 #b7d7e8;
+  }
+  .chip b { display: block; font-size: 18px; line-height: 1.05; }
+  .chip span { color: var(--muted); font-size: 10px; font-weight: 800; }
+  .board {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+    gap: 1px 2px;
+    padding: 2px;
+    background: #7ea8bf;
+    border-radius: 2px;
+    box-shadow: 0 8px 0 #4f9ec4, 0 18px 24px rgba(24, 78, 112, .18);
+    user-select: none;
+    position: relative;
+  }
+  .block {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+    gap: 1px 1px;
+    background: #d5e5ef;
+    min-width: 0;
+  }
+  .cell {
+    aspect-ratio: 1;
+    border: 0;
+    border-radius: 0;
+    position: relative;
+    background: var(--tile);
+    color: var(--ink);
+    font-family: Nunito, sans-serif;
+    font-weight: 900;
+    font-size: clamp(15px, 4.2vw, 20px);
+    cursor: pointer;
+    box-shadow: none;
+    transition: background-color .2s ease, box-shadow .2s ease;
+  }
+  .cell.given { color: var(--ice); background: #f3f8fc; cursor: default; }
+  .cell.ice {
+    color: #16324f;
+    background:
+      linear-gradient(160deg, rgba(255,255,255,.85), transparent 42%),
+      linear-gradient(#d7f1fb, #8ec8e6);
+    box-shadow: inset 0 0 0 2px #ffffff, inset 0 -6px 0 #6eafd0;
+  }
+  .cell.ice::after {
+    content: "";
+    position: absolute;
+    left: 3px;
+    right: 3px;
+    bottom: 3px;
+    height: 3px;
+    border-radius: 99px;
+    background: #2f6f9f;
+    transform-origin: left center;
+    animation: thaw var(--melt, 9s) linear forwards;
+    animation-delay: calc(var(--age, 0ms) * -1);
+  }
+  .cell.frozen {
+    color: #16324f;
+    background:
+      linear-gradient(160deg, rgba(255,255,255,.95), transparent 42%),
+      linear-gradient(#f4fbfe, #9fd0ea);
+    box-shadow: inset 0 0 0 2px #ffffff, inset 0 -5px 0 #6eafd0;
+  }
+  .cell.frozen::after { display: none; }
+  .cell.freeze,
+  .cell.given.freeze { animation: freeze .55s ease both; }
+  .sweep {
+    position: absolute;
+    z-index: 3;
+    pointer-events: none;
+    border-radius: 10px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, .18);
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .85);
+  }
+  .sweep i {
+    position: absolute;
+    top: -20%;
+    bottom: -20%;
+    width: 42%;
+    background: linear-gradient(100deg, transparent, rgba(255,255,255,.95) 48%, transparent);
+    animation: frost .72s ease both;
+  }
+  .sweep.down i {
+    top: auto;
+    bottom: auto;
+    left: -20%;
+    right: -20%;
+    width: auto;
+    height: 42%;
+    background: linear-gradient(180deg, transparent, rgba(255,255,255,.95) 48%, transparent);
+    animation-name: frost-down;
+  }
+  @keyframes freeze {
+    0% { background: #ffffff; box-shadow: inset 0 0 0 0 #4f9ec4; }
+    45% { background: #ffffff; box-shadow: inset 0 0 0 3px #2f6f9f; }
+    100% { background: #d7eef8; box-shadow: inset 0 0 0 2px #ffffff, inset 0 -5px 0 #6eafd0; }
+  }
+  @keyframes frost {
+    from { transform: translateX(-130%); }
+    to { transform: translateX(280%); }
+  }
+  @keyframes frost-down {
+    from { transform: translateY(-130%); }
+    to { transform: translateY(280%); }
+  }
+  .cell.selected { background: #fff4e8; box-shadow: inset 0 0 0 3px var(--accent); }
+  .cell.wrong { color: white; background: var(--accent); }
+  .cell.melt { animation: melt .45s ease; }
+  .cell:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+  @keyframes thaw { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+  @keyframes melt {
+    0% { transform: scale(1); opacity: 1; }
+    40% { transform: scale(.86); opacity: .55; background: #f4fbfe; color: transparent; }
+    100% { transform: scale(1); opacity: 1; background: var(--tile); color: transparent; }
+  }
+  .dock {
+    margin-top: auto;
+    padding-top: 16px;
+  }
+  .pad {
+    display: grid;
+    grid-template-columns: repeat(9, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .pad button, .actions button, .card button {
+    border: 0;
+    border-radius: 16px;
+    background: var(--dock);
+    color: white;
+    font-family: Nunito, sans-serif;
+    font-weight: 900;
+    font-size: 22px;
+    min-height: 52px;
+    cursor: pointer;
+    box-shadow: 0 5px 0 #071824;
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .pad button:active, .actions button:active, .card button:active { transform: translateY(4px); box-shadow: 0 1px 0 #071824; }
+  .pad button:disabled { background: #d5e1ea; color: #8aa0b3; box-shadow: none; cursor: default; transform: none; }
+  .pad button:focus-visible, .actions button:focus-visible, .card button:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+  .actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+  .actions button:disabled { opacity: .45; cursor: default; }
+  .actions button {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 8px;
+    background: #fff;
+    color: var(--ink);
+    font-size: 15px;
+    box-shadow: 0 5px 0 #b7d7e8;
+  }
+  .actions svg { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+  #hint { background: var(--ice); color: #fff; box-shadow: 0 5px 0 #1d4e70; }
+  #hint:active { box-shadow: 0 1px 0 #1d4e70; }
+  .actions button:active { box-shadow: 0 1px 0 #b7d7e8; }
+  .overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 15;
+    background: rgba(16, 32, 51, .42);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .overlay[hidden] { display: none; }
+  .card {
+    width: min(380px, 100%);
+    background: #fffdf8;
+    border: 4px solid #fff;
+    border-radius: 32px;
+    padding: 32px 26px;
+    text-align: center;
+    box-shadow: 0 10px 0 #4f9ec4;
+  }
+  .card h2 { margin: 0 0 8px; font-size: clamp(34px, 8vw, 48px); font-weight: 900; letter-spacing: -1px; line-height: .95; }
+  .card p { margin-bottom: 20px; }
+  .card button { width: 100%; background: var(--accent); box-shadow: 0 5px 0 #c44b30; }
+  .card button:active { box-shadow: 0 1px 0 #c44b30; }
+  .screen { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+  .screen[hidden], .play[hidden] { display: none; }
+  .mark {
+    width: 92px;
+    height: 92px;
+    margin: 0 auto 18px;
+    border-radius: 28px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(160deg, #fff, #9fd8f2);
+    color: var(--ice);
+    font-size: 52px;
+    box-shadow: inset 0 -8px 0 #6eafd0, 0 8px 0 #4f9ec4;
+  }
+  .screen h1, .settings h2 { margin: 0; text-align: center; font-size: 52px; font-weight: 900; letter-spacing: -2px; }
+  .screen .tag { margin: 8px auto 28px; text-align: center; font-size: 16px; }
+  .menu { display: grid; gap: 12px; }
+  .menu button {
+    height: 62px;
+    border: 0;
+    border-radius: 20px;
+    background: var(--accent);
+    color: white;
+    font: 900 22px Nunito, sans-serif;
+    box-shadow: 0 6px 0 #c44b30;
+    cursor: pointer;
+  }
+  .menu button.quiet { background: #fff; color: var(--ink); box-shadow: 0 6px 0 #b7d7e8; }
+  .menu button.ice { background: var(--ice); box-shadow: 0 6px 0 #1d4e70; }
+  .menu button:active { transform: translateY(4px); box-shadow: 0 2px 0 #c44b30; }
+  .menu button.quiet:active { box-shadow: 0 2px 0 #b7d7e8; }
+  .menu button.ice:active { box-shadow: 0 2px 0 #1d4e70; }
+  .menu button small { display: block; margin-top: 1px; font-size: 12px; font-weight: 800; opacity: .8; }
+  .settings h2 { font-size: 36px; margin-bottom: 6px; }
+  .melt-value { margin: 0 0 16px; text-align: center; font-size: 42px; font-weight: 900; }
+  .melt-value span { font-size: 18px; color: var(--muted); }
+  input[type="range"] { width: 100%; accent-color: var(--accent); height: 36px; }
+  .range-ends { display: flex; justify-content: space-between; color: #24516d; font-size: 13px; font-weight: 800; margin: -6px 0 22px; }
+  @media (min-width: 760px) {
+    body { align-items: center; }
+    main { min-height: auto; padding-block: 28px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .gate { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="gate" aria-hidden="true"><span>Su</span><span>do</span><span>ku</span></div>
+<main>
+  <section class="screen" id="home">
+    <div class="mark" aria-hidden="true">9</div>
+    <h1>Sudoku</h1>
+    <p class="tag">Klasik tahta ya da eriyen buz.</p>
+    <div class="menu">
+      <button id="play" type="button">Sudoku</button>
+      <button id="playIce" class="ice" type="button">Buzdoku</button>
+      <button id="openSettings" class="quiet" type="button">Ayarlar</button>
+    </div>
+  </section>
+  <section class="screen" id="difficulty" hidden>
+    <h2>Zorluk</h2>
+    <p class="tag">Kaç kutu boş kalsın?</p>
+    <div class="menu">
+      <button id="easy" type="button" data-empty="35">Kolay <small>35 boş</small></button>
+      <button id="medium" type="button" data-empty="45">Orta <small>45 boş</small></button>
+      <button id="hard" type="button" data-empty="53">Zor <small>53 boş</small></button>
+      <button id="closeDifficulty" class="quiet" type="button">Geri</button>
+    </div>
+  </section>
+  <section class="screen" id="settings" hidden>
+    <h2>Ayarlar</h2>
+    <p class="tag">Buz erime süresi</p>
+    <p class="melt-value" id="meltLabel">9 <span>saniye</span></p>
+    <input id="melt" type="range" min="5" max="20" step="1" value="9" aria-label="Buz erime süresi">
+    <div class="range-ends"><span>5 sn</span><span>20 sn</span></div>
+    <div class="menu">
+      <button id="saveSettings" type="button">Kaydet</button>
+      <button id="closeSettings" class="quiet" type="button">Geri</button>
+    </div>
+  </section>
+  <div class="play" id="playview" hidden>
+  <header>
+    <button id="leave" type="button" aria-label="Oyundan çık">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 7V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2v-2"/><path d="M15 12H3m0 0 3.5-3.5M3 12l3.5 3.5"/></svg>
+    </button>
+    <div class="title">
+      <h1 id="playTitle">Sudoku</h1>
+      <p class="tag" id="rule">9 saniye, sonra erir.</p>
+    </div>
+    <div class="hud">
+      <div class="hearts" id="lives" aria-label="3 can">
+        <i></i><i></i><i></i>
+      </div>
+      <div class="chip"><b id="left">0</b><span>boş</span></div>
+    </div>
+  </header>
+  <div class="board" id="board"></div>
+  <div class="dock">
+    <div class="pad" id="pad"></div>
+    <div class="actions">
+      <button id="undo" type="button" disabled>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 8 4 12l4 4"/><path d="M4 12h10.5a5.5 5.5 0 1 1 0 11H12"/></svg>
+        Geri al
+      </button>
+      <button id="hint" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4"/><path d="M12 3a6.5 6.5 0 0 0-3.2 12.2c.5.4.7.9.7 1.4V17h5v-.4c0-.5.2-1 .7-1.4A6.5 6.5 0 0 0 12 3Z"/></svg>
+        İpucu
+      </button>
+      <button id="restart" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg>
+        Yeni
+      </button>
+    </div>
+  </div>
+  </div>
+</main>
+<div class="overlay" id="overlay" hidden>
+  <div class="card">
+    <h2 id="endTitle">Buz kazandı</h2>
+    <p id="endText"></p>
+    <button id="again" type="button">Tekrar dene</button>
+  </div>
+</div>
+<script>
+const BASE = [
+  5,3,4,6,7,8,9,1,2,
+  6,7,2,1,9,5,3,4,8,
+  1,9,8,3,4,2,5,6,7,
+  8,5,9,7,6,1,4,2,3,
+  4,2,6,8,5,3,7,9,1,
+  7,1,3,9,2,4,8,5,6,
+  9,6,1,5,3,7,2,8,4,
+  2,8,7,4,1,9,6,3,5,
+  3,4,5,2,8,6,1,7,9
+];
+const LEVELS = { 35: "Kolay", 45: "Orta", 53: "Zor" };
+let emptyCount = 45;
+let iceMode = false;
+const PEERS = Array.from({ length: 81 }, (_, i) => {
+  const row = Math.floor(i / 9) * 9;
+  const col = i % 9;
+  const box = Math.floor(i / 27) * 27 + Math.floor((i % 9) / 3) * 3;
+  const peers = new Set();
+  for (let k = 0; k < 9; k++) {
+    peers.add(row + k);
+    peers.add(col + k * 9);
+  }
+  [0, 1, 2, 9, 10, 11, 18, 19, 20].forEach(k => peers.add(box + k));
+  peers.delete(i);
+  return [...peers];
+});
+let solution = BASE.slice();
+let given = new Set();
+
+const boardEl = document.getElementById("board");
+const padEl = document.getElementById("pad");
+const livesEl = document.getElementById("lives");
+const leftEl = document.getElementById("left");
+const overlay = document.getElementById("overlay");
+
+let values = [];
+let selected = 0;
+let lives = 3;
+let over = false;
+let timer = null;
+let meltMs = Number(localStorage.getItem("meltoku-melt")) || 9000;
+const placedAt = new Map();
+const history = [];
+const frozen = new Set();
+
+function shuffle(list) {
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [list[i], list[j]] = [list[j], list[i]];
+  }
+  return list;
+}
+
+function newPuzzle() {
+  const digits = shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  const map = new Map(digits.map((n, i) => [i + 1, n]));
+  const bands = shuffle([0, 1, 2]);
+  const stacks = shuffle([0, 1, 2]);
+  const bandRows = bands.map(() => shuffle([0, 1, 2]));
+  const stackCols = stacks.map(() => shuffle([0, 1, 2]));
+  solution = Array(81).fill(0);
+  for (let row = 0; row < 9; row++) {
+    for (let col = 0; col < 9; col++) {
+      const srcRow = bands[Math.floor(row / 3)] * 3 + bandRows[Math.floor(row / 3)][row % 3];
+      const srcCol = stacks[Math.floor(col / 3)] * 3 + stackCols[Math.floor(col / 3)][col % 3];
+      solution[row * 9 + col] = map.get(BASE[srcRow * 9 + srcCol]);
+    }
+  }
+  const puzzle = solution.slice();
+  let left = 81;
+  shuffle([...Array(81).keys()]).forEach(i => {
+    if (81 - left >= emptyCount) return;
+    const saved = puzzle[i];
+    puzzle[i] = 0;
+    if (solutionCount(puzzle, 2) === 1) left--;
+    else puzzle[i] = saved;
+  });
+  given = new Set(puzzle.map((n, i) => n ? i : -1).filter(i => i >= 0));
+}
+
+function solutionCount(grid, limit) {
+  let found = 0;
+  const empty = [];
+  for (let i = 0; i < 81; i++) if (!grid[i]) empty.push(i);
+  function search(step) {
+    if (found >= limit) return;
+    if (step === empty.length) { found++; return; }
+    let best = step;
+    let choices = 10;
+    for (let s = step; s < empty.length; s++) {
+      const i = empty[s];
+      let count = 0;
+      const used = new Set(PEERS[i].map(p => grid[p]));
+      for (let n = 1; n <= 9; n++) if (!used.has(n)) count++;
+      if (count < choices) { choices = count; best = s; if (!count) break; }
+    }
+    if (!choices) return;
+    const i = empty[best];
+    empty[best] = empty[step];
+    empty[step] = i;
+    const used = new Set(PEERS[i].map(p => grid[p]));
+    for (let n = 1; n <= 9 && found < limit; n++) {
+      if (used.has(n)) continue;
+      grid[i] = n;
+      search(step + 1);
+      grid[i] = 0;
+    }
+    empty[step] = empty[best];
+    empty[best] = i;
+  }
+  search(0);
+  return found;
+}
+
+function start() {
+  newPuzzle();
+  values = solution.map((n, i) => given.has(i) ? n : 0);
+  selected = values.findIndex(n => n === 0);
+  lives = 3;
+  over = false;
+  placedAt.clear();
+  history.length = 0;
+  frozen.clear();
+  overlay.hidden = true;
+  document.documentElement.style.setProperty("--melt", meltMs + "ms");
+  document.getElementById("playTitle").textContent = iceMode ? "Buzdoku" : "Sudoku";
+  document.getElementById("rule").textContent = LEVELS[emptyCount] + " · " + emptyCount + " boş kutu";
+  clearInterval(timer);
+  timer = iceMode ? setInterval(melt, 200) : null;
+  build();
+}
+
+function cellAt(i) {
+  return boardEl.querySelector('[data-i="' + i + '"]');
+}
+
+function paint(i) {
+  const cell = cellAt(i);
+  const n = values[i];
+  cell.classList.remove("given", "ice", "frozen", "selected", "wrong");
+  cell.style.removeProperty("--age");
+  if (given.has(i)) cell.classList.add("given");
+  else if (n && (!iceMode || sealed(i))) cell.classList.add(iceMode ? "frozen" : "given");
+  else if (n) {
+    cell.classList.add("ice");
+    const born = placedAt.get(i) || Date.now();
+    cell.style.setProperty("--age", Math.min(meltMs, Date.now() - born) + "ms");
+  }
+  if (i === selected) cell.classList.add("selected");
+  cell.textContent = n || "";
+}
+
+function build() {
+  boardEl.innerHTML = "";
+  const blocks = Array.from({ length: 9 }, () => {
+    const block = document.createElement("div");
+    block.className = "block";
+    for (let n = 0; n < 9; n++) block.appendChild(document.createElement("span"));
+    boardEl.appendChild(block);
+    return block;
+  });
+  values.forEach((n, i) => {
+    const cell = document.createElement("button");
+    cell.type = "button";
+    cell.className = "cell";
+    cell.dataset.i = i;
+    cell.setAttribute("aria-label", "Kare " + (i + 1));
+    cell.addEventListener("click", () => select(i));
+    const row = Math.floor(i / 9);
+    const col = i % 9;
+    const slot = (row % 3) * 3 + (col % 3);
+    blocks[Math.floor(row / 3) * 3 + Math.floor(col / 3)].children[slot].replaceWith(cell);
+    paint(i);
+  });
+
+  padEl.innerHTML = "";
+  for (let n = 1; n <= 9; n++) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = n;
+    button.setAttribute("aria-label", n + " yaz");
+    button.addEventListener("click", () => place(n));
+    padEl.appendChild(button);
+  }
+  refresh();
+}
+
+function refresh() {
+  for (let n = 1; n <= 9; n++) {
+    padEl.children[n - 1].disabled = values.filter(v => v === n).length >= 9;
+  }
+  [...livesEl.children].forEach((heart, i) => heart.classList.toggle("off", i >= lives));
+  livesEl.setAttribute("aria-label", lives + " can");
+  leftEl.textContent = values.filter(v => v === 0).length;
+  document.getElementById("undo").disabled = history.length === 0 || over;
+  document.getElementById("hint").disabled = over || values.every(v => v !== 0);
+}
+
+function select(i) {
+  if (over || given.has(i) || i === selected) return;
+  const previous = selected;
+  selected = i;
+  if (previous >= 0) paint(previous);
+  paint(i);
+}
+
+function place(n) {
+  if (over || selected < 0 || given.has(selected) || values[selected]) return;
+  if (n !== solution[selected]) {
+    const cell = cellAt(selected);
+    cell.classList.add("wrong");
+    cell.textContent = n;
+    lives -= 1;
+    [...livesEl.children].forEach((heart, i) => heart.classList.toggle("off", i >= lives));
+    livesEl.setAttribute("aria-label", lives + " can");
+    setTimeout(() => { if (!over) paint(selected); }, 250);
+    if (lives <= 0) finish(false);
+    return;
+  }
+  const placed = selected;
+  history.push(placed);
+  values[placed] = n;
+  placedAt.set(placed, Date.now());
+  const lines = iceMode ? completedLines(placed).filter(line => line.some(i => !frozen.has(i))) : [];
+  lines.flat().forEach(i => frozen.add(i));
+  selected = values.findIndex(v => v === 0);
+  paint(placed);
+  if (selected >= 0 && selected !== placed) paint(selected);
+  lines.flat().forEach(i => { if (i !== placed) paint(i); });
+  const seen = new Set();
+  lines.forEach(line => {
+    const fresh = line.filter(i => !seen.has(i));
+    fresh.forEach((i, order) => {
+      seen.add(i);
+      const cell = cellAt(i);
+      if (!cell) return;
+      cell.style.animationDelay = order * 55 + "ms";
+      cell.classList.add("freeze");
+    });
+    sweep(line);
+  });
+  refresh();
+  if (values.every(v => v !== 0)) finish(true);
+}
+
+function sweep(indexes) {
+  const cells = indexes.map(cellAt).filter(Boolean);
+  if (!cells.length) return;
+  const board = boardEl.getBoundingClientRect();
+  const rects = cells.map(cell => cell.getBoundingClientRect());
+  const layer = document.createElement("div");
+  layer.className = "sweep";
+  const vertical = rects[rects.length - 1].top - rects[0].top > rects[0].height;
+  if (vertical && rects[rects.length - 1].left === rects[0].left) layer.classList.add("down");
+  const left = Math.min(...rects.map(r => r.left));
+  const top = Math.min(...rects.map(r => r.top));
+  const right = Math.max(...rects.map(r => r.right));
+  const bottom = Math.max(...rects.map(r => r.bottom));
+  layer.style.left = (left - board.left) + "px";
+  layer.style.top = (top - board.top) + "px";
+  layer.style.width = (right - left) + "px";
+  layer.style.height = (bottom - top) + "px";
+  layer.appendChild(document.createElement("i"));
+  boardEl.appendChild(layer);
+  layer.addEventListener("animationend", () => layer.remove());
+}
+
+function completedLines(i) {
+  const row = Math.floor(i / 9) * 9;
+  const col = i % 9;
+  const box = Math.floor(i / 27) * 27 + Math.floor((i % 9) / 3) * 3;
+  const lines = [
+    Array.from({ length: 9 }, (_, k) => row + k),
+    Array.from({ length: 9 }, (_, k) => col + k * 9),
+    [0,1,2,9,10,11,18,19,20].map(k => box + k)
+  ];
+  return lines.filter(lineFull);
+}
+
+function lineFull(indexes) {
+  return indexes.every(i => values[i] !== 0);
+}
+
+function sealed(i) {
+  return completedLines(i).length > 0;
+}
+
+function melt() {
+  if (over) return;
+  const now = Date.now();
+  const gone = [];
+  values.forEach((v, i) => {
+    if (v && !given.has(i) && !sealed(i) && now - placedAt.get(i) >= meltMs) gone.push(i);
+  });
+  if (!gone.length) return;
+  const digits = new Map(gone.map(i => [i, values[i]]));
+  gone.forEach(i => {
+    values[i] = 0;
+    placedAt.delete(i);
+    frozen.delete(i);
+  });
+  if (selected < 0) selected = gone[0];
+  gone.forEach(i => paint(i));
+  refresh();
+  gone.forEach(i => {
+    const cell = cellAt(i);
+    if (!cell) return;
+    cell.textContent = digits.get(i);
+    cell.classList.add("ice", "melt");
+    cell.addEventListener("animationend", () => {
+      cell.classList.remove("ice", "melt");
+      cell.textContent = "";
+    }, { once: true });
+  });
+}
+
+function finish(won) {
+  over = true;
+  clearInterval(timer);
+  document.getElementById("endTitle").textContent = won ? "Tahta kapandı" : (iceMode ? "Buz kazandı" : "Canın bitti");
+  document.getElementById("endText").textContent = won
+    ? "Canın bitmeden tahtayı kapattın."
+    : (iceMode ? "Üç yanlış. Buz tahtayı senden önce sildi." : "Üç yanlış. Yeni bir tahta dene.");
+  overlay.hidden = false;
+}
+
+function hint() {
+  if (over) return;
+  const open = values.map((v, i) => v === 0 ? i : -1).filter(i => i >= 0);
+  if (!open.length) return;
+  const index = open[Math.floor(Math.random() * open.length)];
+  selected = index;
+  place(solution[index]);
+}
+
+function leave() {
+  over = true;
+  clearInterval(timer);
+  overlay.hidden = true;
+  show("home");
+}
+
+document.getElementById("hint").addEventListener("click", hint);
+document.getElementById("leave").addEventListener("click", leave);
+document.getElementById("undo").addEventListener("click", () => {
+  const index = history.pop();
+  if (index === undefined || over) return;
+  values[index] = 0;
+  placedAt.delete(index);
+  frozen.forEach(i => { if (!sealed(i)) frozen.delete(i); });
+  selected = index;
+  values.forEach((_, i) => paint(i));
+  refresh();
+});
+document.getElementById("restart").addEventListener("click", start);
+document.getElementById("again").addEventListener("click", start);
+
+document.addEventListener("keydown", event => {
+  if (over) return;
+  if (event.key >= "1" && event.key <= "9") place(Number(event.key));
+  const step = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -9, ArrowDown: 9 }[event.key];
+  if (!step || selected < 0) return;
+  event.preventDefault();
+  for (let i = selected + step; i >= 0 && i < 81; i += step) {
+    if (!given.has(i)) { select(i); break; }
+  }
+});
+
+const fine = window.matchMedia("(hover: hover) and (pointer: fine)").matches
+  && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+if (fine) {
+  document.querySelectorAll(".pad, .actions, .card").forEach(zone => {
+    zone.addEventListener("pointermove", event => {
+      const button = event.target.closest("button");
+      if (!button || button.disabled) return;
+      const rect = button.getBoundingClientRect();
+      const x = (event.clientX - (rect.left + rect.width / 2)) / rect.width;
+      const y = (event.clientY - (rect.top + rect.height / 2)) / rect.height;
+      button.style.transform = `translate(${x * 8}px, ${y * 8}px)`;
+    });
+    zone.addEventListener("pointerleave", () => {
+      zone.querySelectorAll("button").forEach(button => { button.style.transform = ""; });
+    });
+  });
+}
+
+const home = document.getElementById("home");
+const difficulty = document.getElementById("difficulty");
+const settings = document.getElementById("settings");
+const playview = document.getElementById("playview");
+const meltInput = document.getElementById("melt");
+const meltLabel = document.getElementById("meltLabel");
+
+function showMelt(ms) {
+  meltLabel.innerHTML = (ms / 1000) + ' <span>saniye</span>';
+}
+function show(screen) {
+  home.hidden = screen !== "home";
+  difficulty.hidden = screen !== "difficulty";
+  settings.hidden = screen !== "settings";
+  playview.hidden = screen !== "play";
+}
+document.getElementById("play").addEventListener("click", () => { iceMode = false; show("difficulty"); });
+document.getElementById("playIce").addEventListener("click", () => { iceMode = true; show("difficulty"); });
+document.getElementById("closeDifficulty").addEventListener("click", () => show("home"));
+document.querySelectorAll("#difficulty [data-empty]").forEach(button => {
+  button.addEventListener("click", () => {
+    emptyCount = Number(button.dataset.empty);
+    show("play");
+    start();
+  });
+});
+document.getElementById("openSettings").addEventListener("click", () => {
+  meltInput.value = meltMs / 1000;
+  showMelt(meltMs);
+  show("settings");
+});
+meltInput.addEventListener("input", () => showMelt(Number(meltInput.value) * 1000));
+document.getElementById("saveSettings").addEventListener("click", () => {
+  meltMs = Number(meltInput.value) * 1000;
+  localStorage.setItem("meltoku-melt", meltMs);
+  show("home");
+});
+document.getElementById("closeSettings").addEventListener("click", () => show("home"));
+show("home");
+</script>
+</body>
+</html>
